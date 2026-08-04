@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: raw_clickstream
+    database: CLICKSTREAM_DB
+    schema: RAW
+    tables:
+      - name: clickstream_events
+        description: "Raw JSON clickstream payload landed via Snowpipe from S3"

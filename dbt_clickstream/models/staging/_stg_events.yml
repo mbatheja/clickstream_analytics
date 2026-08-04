@@ -1,0 +1,49 @@
+version: 2
+
+models:
+  - name: stg_events
+    description: "Staging model for raw clickstream event logs."
+    columns:
+      - name: event_id
+        description: "Primary key for each individual event."
+        data_tests:
+          - not_null
+          - unique
+      
+      - name: user_id
+        data_tests: 
+        - not_null
+
+      - name: session_id
+        data_tests:
+          - not_null
+
+      - name: variant
+        description: "A/B testing assignment group."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['control',  'new_checkout_ui']
+      
+      - name: event_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['page_view', 'checkout', 'purchase']
+
+      - name: event_timestamp
+        data_tests:
+          - not_null      
+      
+      - name: device_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['desktop', 'mobile', 'tablet']
+
+      - name: ingested_at
+        data_tests:
+          - not_null

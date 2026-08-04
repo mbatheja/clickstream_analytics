@@ -1,0 +1,17 @@
+# Virtual Environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# dbt Build Output & Logs
+target/
+dbt_packages/
+dbt_project.yml.user
+logs/
+
+# System / Local Configs
+*.log
+.env
+*.pem
+aws_keys.json
