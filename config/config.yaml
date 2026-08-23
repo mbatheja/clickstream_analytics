@@ -12,7 +12,7 @@ funnel:
   - "purchase_completed"
 
   transition_probabilities: #Conditional markov prob = n(S+1)/ n(S)
-    view_himepage: 0.80
+    view_homepage: 0.80
     search_product: 0.60
     view_product_details: 0.40
     add_to_cart: 0.50

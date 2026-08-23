@@ -1,0 +1,14 @@
+{
+  "event_id": "3f77a3d6-9492-416e-a60d-ff2e4d612cc7",
+  "user_id": "usr_1109",
+  "session_id": "d92d6c8a",
+  "event_type": "search_product",
+  "timestamp": "2026-06-12T21:03:19",
+  "device": "tablet",
+  "experiment_id": "exp_checkout_redesign_2026",
+  "customer_metadata": {
+    "acquisition_channel": "Organic",
+    "signup_date": "2026-06-12",
+    "experiment_variant": "control"
+  }
+}

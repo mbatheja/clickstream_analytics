@@ -12,7 +12,7 @@ models:
       
       - name: user_id
         data_tests: 
-        - not_null
+          - not_null
 
       - name: session_id
         data_tests:
@@ -31,13 +31,13 @@ models:
           - not_null
           - accepted_values:
               arguments:
-                values: ['page_view', 'checkout', 'purchase']
+                values: ['view_homepage', 'search_product', 'view_product_details', 'add_to_cart', 'checkout_initiated', 'purchase_completed']
 
       - name: event_timestamp
         data_tests:
           - not_null      
       
-      - name: device_type
+      - name: device
         data_tests:
           - not_null
           - accepted_values:
@@ -45,5 +45,16 @@ models:
                 values: ['desktop', 'mobile', 'tablet']
 
       - name: ingested_at
+        data_tests:
+          - not_null
+    
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Organic', 'Google_Ads', 'Email', 'Direct']
+
+      - name: signup_date
         data_tests:
           - not_null

@@ -1,0 +1,14 @@
+{
+  "event_id": "fc769096-6f14-489f-901d-05226dc06733",
+  "user_id": "usr_1095",
+  "session_id": "963ed547",
+  "event_type": "view_product_details",
+  "timestamp": "2026-06-08T19:05:58",
+  "device": "mobile",
+  "experiment_id": "exp_checkout_redesign_2026",
+  "customer_metadata": {
+    "acquisition_channel": "Direct",
+    "signup_date": "2026-06-02",
+    "experiment_variant": "control"
+  }
+}

@@ -1,0 +1,136 @@
+version: 2
+
+models:
+  - name: fct_conversion_funel
+    description: "Session-level fact model tracking funnel progression, drop-offs, and A/B variant conversions"
+    columns:
+      - name: session_date
+        data_tests:
+          - not_null
+      
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['control', 'new_checkout_ui']
+      
+      - name: device
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['mobile', 'desktop', 'tablet']
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Organic', 'Google_Ads', 'Email', 'Direct']
+
+      - name: user_type
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['new_user', 'returning_user']
+      
+      - name: total_sessions
+        data_tests:
+          - not_null
+      
+      - name: unique_users
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        description: "End-to-end purchase conversion rate percentage."
+        data_tests:
+          - not_null
+
+  - name: fct_ab_test_summary
+    description: "Experiment-level summary table aggregating total sample sizes, stage volumes, and baseline conversion rates across A/B test variants for hypothesis testing."
+    columns:
+      - name: variant
+        description: "A/B test assignment group."
+        data_tests:
+          - not_null
+          - unique
+          - accepted_values:
+              arguments:
+                values: ['control', 'new_checkout_ui']
+
+      - name: total_sessions
+        description: "Total session sample size (N_sessions)."
+        data_tests:
+          - not_null
+
+      - name: total_users
+        description: "Total user sample size (N_users)."
+        data_tests:
+          - not_null
+
+      - name: total_conversions
+        description: "Total successful purchase conversions (K)."
+        data_tests:
+          - not_null
+
+      - name: overall_conversion_rate
+        description: "Proportion of converted sessions relative to total sessions (p_hat)."
+        data_tests:
+          - not_null
+
+      - name: checkout_to_purchase_rate
+        description: "Proportion of sessions reaching checkout that completed purchase."
+        data_tests:
+          - not_null
+  
+  - name: fct_user_retention
+    description: "Cohort retention breakdown by signup date, variant, and acquisition channel."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - cohort_date
+            - variant
+            - acquisition_channel
+    columns:
+      - name: cohort_days
+        data_tests:
+          - not_null
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              values: ['control', 'new_checkout_ui']
+      - name: cohort_size
+        data_tests:
+          - not_null
+      - name: d1_retention_rate
+        data_tests:
+          - not_null
+
+  - name: fct_session_dropoff
+    description: "Table details where exactly did the user bounce off in our funnel steps. This information is provided at acquisition channel, devices and variant level  "
+    tests:
+      - dbt_utl=ils.unique_combination_of_columns:
+          combination_of_columns:
+            - device
+            - variant
+            - acquisition_channel
+            - exit_event
+    columns:
+      - name: exit_event
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['view_homepage', 'search_product', 'view_product_details', 'add_to_cart', 'checkout_initated', 'purchase_completed']
+
+      - name: total_exits
+        data_tests:
+          - not_null
+
+      - name: bounced_sessions
+        data_tests:
+          - not_null

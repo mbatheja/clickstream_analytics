@@ -12,12 +12,15 @@ import random
 import uuid
 import yaml
 
+# Import sample size calculator from utils
+from src.utils.sample_size import calculate_sample_size
+
+
 def load_config(config_path: str = "config/config.yaml") -> dict:
     """
     Loads external parameters from YAML configuration.
-    Edit YAML to change sample size and probabilities.
+    Edit YAML to change probabilities and funnel stages.
     """
-
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
     full_path = os.path.join(base_dir, config_path)
 
@@ -27,30 +30,33 @@ def load_config(config_path: str = "config/config.yaml") -> dict:
     with open(full_path, "r") as f:
         return yaml.safe_load(f)
 
-def simulate_user_session(user_id: str, config: dict) -> list[dict]:
+
+def simulate_user_session(
+    user_id: str,
+    config: dict,
+    variant: str = None,
+    device: str = None,
+    channel: str = None,
+    signup_date: str = None,
+    session_start_time: datetime = None
+) -> tuple[list[dict], datetime]:
     """
     Simulates a single user journey through the conversion funnel.
-
-    Flow:
-    1. Assign user to an A/B test variant (1:1 randomized split)
-    2. Step through funnel stages sequentially
-    3. At each stage, generate random number between 0.0 and 1.0.
-       If random.random() < step_probability, the user advances, otherwise drop-off
-    4. Construct and return a list of JSON-serializable event dictionaries.
-
+    Accepts optional persistent user attributes to maintain multi-session consistency.
     """
-
     session_id = str(uuid.uuid4())[:8]
 
-    # splits
-    variant = random.choice(["control", "new_checkout_ui"])
-    device = random.choice(["mobile", "desktop", "tablet"])
-    channel = random.choice(["Organic", "Google_Ads", "Email", "Direct"])
+    # Assign or retain persistent user attributes
+    variant = variant or random.choice(["control", "new_checkout_ui"])
+    device = device or random.choice(["mobile", "desktop", "tablet"])
+    channel = channel or random.choice(["Organic", "Google_Ads", "Email", "Direct"])
+    experiment_id = "exp_checkout_redesign_2026"
+    signup_date = signup_date or "2026-06-01"
 
-    # initialize session start time
-    current_time = datetime.now() - timedelta(minutes=random.randint(1, 300))
+    # Initialize session start time
+    current_time = session_start_time or (datetime.now() - timedelta(minutes=random.randint(1, 300)))
 
-    # unpack config variables
+    # Unpack config variables
     funnel_steps = config["funnel"]["steps"]
     base_probs = config["funnel"]["transition_probabilities"]
     exp_config = config["experiments"]["checkout_conversion"]
@@ -58,30 +64,28 @@ def simulate_user_session(user_id: str, config: dict) -> list[dict]:
     events = []
 
     for i, step in enumerate(funnel_steps):
-        # start at view homepage
+        # Start at view homepage
         if i == 0:
             should_continue = True
 
-        # evaluate A/B test transition (checkout initation to purchase completion)
-        elif funnel_steps[i-1] == "checkout_initated":
-            # select underlying popn conversion probability based on the user's assigned group
+        # Evaluate A/B test transition
+        elif funnel_steps[i-1] in ["checkout_initiated", "checkout_initated"]:
             prob = exp_config["variant"] if variant == "new_checkout_ui" else exp_config["control"]
-            # Monte Carlo decision
             should_continue = random.random() < prob
 
-        # evaluate baseline transition probabilities for standard funnel steps
+        # Evaluate baseline transition probabilities for standard funnel steps
         else:
             prob = base_probs.get(funnel_steps[i-1], 0.0)
             should_continue = random.random() < prob
 
-        # if user fails prob check, they exit
+        # If user fails probability check, they exit
         if not should_continue:
             break
 
-        # simulate realistic time delay between click (15 to 120 sec)
+        # Simulate realistic time delay between clicks (15 to 120 sec)
         current_time += timedelta(seconds=random.randint(15, 120))
 
-        # build the structured telemetry payload
+        # Build the structured telemetry payload
         payload = {
             "event_id": str(uuid.uuid4()),
             "user_id": user_id,
@@ -89,42 +93,89 @@ def simulate_user_session(user_id: str, config: dict) -> list[dict]:
             "event_type": step,
             "timestamp": current_time.isoformat(),
             "device": device,
+            "experiment_id": experiment_id,  # Top-level field for easy dbt filtering
             "customer_metadata": {
-             "acquisition_channel": channel,
-             "signup_date": "2026-06-01",
-             "experiment_variant": variant   
+                "acquisition_channel": channel,
+                "signup_date": signup_date,
+                "experiment_variant": variant   
             }
         }
         events.append(payload)
 
-    return events
+    return events, current_time
+
 
 def run_generator():
     """
-    Generates and persists mock clickstream events
+    Generates and persists mock clickstream events using statistical sample size.
+    Simulates persistent user cohorts with multi-session activity across several days.
     """
     config = load_config()
-
     output_dir = config["simulation"]["output_dir"]
-    num_users = config["simulation"]["num_users"]
+    exp_config = config["experiments"]["checkout_conversion"]
 
-    os.makedirs(output_dir, exists_ok=True)
+    # Fetch baseline & variant conversion rates from config
+    p_control = exp_config["control"]      # e.g., 0.05
+    p_variant = exp_config["variant"]      # e.g., 0.055
+    relative_mde = (p_variant - p_control) / p_control
+
+    # 2. Calculate statistically required user count (80% Power, 95% Confidence)
+    num_users = calculate_sample_size(p1=p_control, relative_mde=relative_mde)
+
+    print(f"Control Conversion Rate:    {p_control * 100:.2f}%")
+    print(f"Variant Conversion Rate:    {p_variant * 100:.2f}% (Lift: +{relative_mde * 100:.1f}%)")
+    num_users = num_users[0] * 2 if isinstance(num_users, tuple) else num_users
+    print(f"Statistically Required N:  {int(num_users):,} total users")
+
+    os.makedirs(output_dir, exist_ok=True)
 
     total_events = 0
-    print(f"Generating clickstream data for {num_users} users...")
+    total_sessions = 0
+    start_sim_base = datetime(2026, 6, 1, 9, 0, 0)
+    print(f"Generating multi-session clickstream data for {num_users:,} persistent users...")
 
-    for idx in range(num_users):
+    for idx in range(int(num_users)):
         user_id = f"usr_{1000 + idx}"
-        session_events = simulate_user_session(user_id, config)
 
-        # save each event as an individual JSON file
-        for event in session_events:
-            file_path = os.path.join(output_dir, f"event_{event['event_id']}.json")
-            with open(file_path, "w") as f:
-                json.dump(event, f, indent=2)
-            total_events += 1
+        # Establish immutable attributes per user
+        variant = random.choice(["control", "new_checkout_ui"])
+        device = random.choice(["mobile", "desktop", "tablet"])
+        channel = random.choice(["Organic", "Google_Ads", "Email", "Direct"])
+        
+        # User signs up on a specific day in a 14-day window
+        signup_dt = start_sim_base + timedelta(days=random.randint(0, 14), hours=random.randint(0, 12))
+        signup_date = signup_dt.strftime("%Y-%m-%d")
 
-    print(f"Simulation complete. Generated {total_events} raw event files in '{output_dir}/'.")
+        # Determine repeat visit frequency (1 to 5 sessions per user)
+        num_sessions = random.choices([1, 2, 3, 4, 5], weights=[0.45, 0.25, 0.15, 0.10, 0.05])[0]
+        current_session_time = signup_dt
+
+        for s_idx in range(num_sessions):
+            session_events, session_end_time = simulate_user_session(
+                user_id=user_id,
+                config=config,
+                variant=variant,
+                device=device,
+                channel=channel,
+                signup_date=signup_date,
+                session_start_time=current_session_time
+            )
+
+            # Save each event as an individual JSON file
+            for event in session_events:
+                file_path = os.path.join(output_dir, f"event_{event['event_id']}.json")
+                with open(file_path, "w") as f:
+                    json.dump(event, f, indent=2)
+                total_events += 1
+
+            total_sessions += 1
+
+            # Advance time by 1 to 7 days for subsequent return sessions
+            days_until_next = random.randint(1, 7)
+            hours_offset = random.randint(1, 8)
+            current_session_time = session_end_time + timedelta(days=days_until_next, hours=hours_offset)
+
+    print(f"Simulation complete. Generated {total_events:,} raw events across {total_sessions:,} sessions in '{output_dir}/'.")
 
 
 if __name__ == "__main__":

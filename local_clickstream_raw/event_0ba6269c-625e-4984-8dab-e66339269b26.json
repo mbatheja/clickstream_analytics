@@ -1,0 +1,14 @@
+{
+  "event_id": "0ba6269c-625e-4984-8dab-e66339269b26",
+  "user_id": "usr_1034",
+  "session_id": "2e9c5a26",
+  "event_type": "view_homepage",
+  "timestamp": "2026-06-15T02:04:38",
+  "device": "desktop",
+  "experiment_id": "exp_checkout_redesign_2026",
+  "customer_metadata": {
+    "acquisition_channel": "Email",
+    "signup_date": "2026-06-10",
+    "experiment_variant": "new_checkout_ui"
+  }
+}

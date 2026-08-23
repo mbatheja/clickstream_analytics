@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: int_sessions
+    description: "Session-level aggregation modeling user funnel progression, user segmentation, and session duration."
+    columns:
+      - name: session_id
+        description: "Primary key for each session."
+        data_tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        data_tests:
+          - not_null
+
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['control', 'new_checkout_ui']
+
+      - name: device
+        data_tests:
+          - not_null
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+
+      - name: user_type
+        description: "Categorizes users as 'new_user' or 'returning_user'."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['new_user', 'returning_user']
+
+      - name: homepage_views
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: has_searched_product
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: has_viewed_product
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: added_to_cart
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: has_checkout
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+
+      - name: has_purchased
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]

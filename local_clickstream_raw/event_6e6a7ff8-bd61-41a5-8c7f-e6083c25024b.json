@@ -1,0 +1,14 @@
+{
+  "event_id": "6e6a7ff8-bd61-41a5-8c7f-e6083c25024b",
+  "user_id": "usr_1046",
+  "session_id": "b92907e6",
+  "event_type": "view_homepage",
+  "timestamp": "2026-06-02T18:08:51",
+  "device": "mobile",
+  "experiment_id": "exp_checkout_redesign_2026",
+  "customer_metadata": {
+    "acquisition_channel": "Google_Ads",
+    "signup_date": "2026-06-01",
+    "experiment_variant": "new_checkout_ui"
+  }
+}
