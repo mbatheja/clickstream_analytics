@@ -95,7 +95,7 @@ models:
             - variant
             - acquisition_channel
     columns:
-      - name: cohort_days
+      - name: cohort_date
         data_tests:
           - not_null
       - name: variant
@@ -113,7 +113,7 @@ models:
   - name: fct_session_dropoff
     description: "Table details where exactly did the user bounce off in our funnel steps. This information is provided at acquisition channel, devices and variant level  "
     tests:
-      - dbt_utl=ils.unique_combination_of_columns:
+      - dbt_utils.unique_combination_of_columns:
           combination_of_columns:
             - device
             - variant
