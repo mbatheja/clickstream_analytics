@@ -1,4 +1,22 @@
 boto3
 python-dotenv
 PyYAML
-yaml
+
+# Statistical Analysis
+lifelines
+scipy
+statsmodels
+
+# Data / ML
+pandas
+numpy
+scikit-learn
+matplotlib
+
+# Snowflake / dbt
+snowflake-connector-python
+dbt-core
+dbt-snowflake
+
+# Testing
+pytest

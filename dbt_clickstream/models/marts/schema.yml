@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: fct_conversion_funel
+  - name: fct_conversion_funnel
     description: "Session-level fact model tracking funnel progression, drop-offs, and A/B variant conversions"
     columns:
       - name: session_date
@@ -90,10 +90,11 @@ models:
     description: "Cohort retention breakdown by signup date, variant, and acquisition channel."
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - cohort_date
-            - variant
-            - acquisition_channel
+          arguments:
+            combination_of_columns:
+              - cohort_date
+              - variant
+              - acquisition_channel
     columns:
       - name: cohort_date
         data_tests:
@@ -102,7 +103,8 @@ models:
         data_tests:
           - not_null
           - accepted_values:
-              values: ['control', 'new_checkout_ui']
+              arguments:
+                values: ['control', 'new_checkout_ui']
       - name: cohort_size
         data_tests:
           - not_null
@@ -114,18 +116,19 @@ models:
     description: "Table details where exactly did the user bounce off in our funnel steps. This information is provided at acquisition channel, devices and variant level  "
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - device
-            - variant
-            - acquisition_channel
-            - exit_event
+          arguments:
+            combination_of_columns:
+              - device
+              - variant
+              - acquisition_channel
+              - exit_event
     columns:
       - name: exit_event
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['view_homepage', 'search_product', 'view_product_details', 'add_to_cart', 'checkout_initated', 'purchase_completed']
+                values: ['view_homepage', 'search_product', 'view_product_details', 'add_to_cart', 'checkout_initiated', 'purchase_completed']
 
       - name: total_exits
         data_tests:

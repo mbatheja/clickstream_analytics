@@ -3,7 +3,11 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import silhouette_score
 import os
+from pathlib import Path
 import snowflake.connector
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 def run_user_clustering(df: pd.DataFrame):
     df = df.copy()
@@ -82,6 +86,8 @@ if __name__ == "__main__":
                 from int_sessions
             """
     df = pd.read_sql(query, conn)
+    df.columns = df.columns.str.lower()
+    df['user_signup_date'] = pd.to_datetime(df['user_signup_date'])
     conn.close()
 
     print(f"Loaded {len(df):,} session records. Running clustering algorithm...\n")

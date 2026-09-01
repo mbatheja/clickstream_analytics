@@ -7,7 +7,7 @@ select session_id,
        user_id,
        max(device) as device,
        max(variant) as variant,
-       max(acquistion_channel) as acquisition_channel,
+       max(acquisition_channel) as acquisition_channel,
        max(signup_date) as user_signup_date,
        case
             when max(signup_date) = date_trunc('day', min(event_timestamp)) then 'new_user'

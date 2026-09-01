@@ -19,12 +19,12 @@ with DAG(
 
     generate_events = BashOperator(
         task_id='generate_events',
-        bash_command='python3 /app/src/pipeline/event_generator/event_generator.py'
+        bash_command='cd /app && python3 -m src.pipeline.s3_streamer'
     )
 
     dbt_build = BashOperator(
         task_id='dbt_build',
-        bash_command='cd /app && dbt build'
+        bash_command='cd /app/dbt_clickstream && dbt deps && dbt build'
     )
 
     evaluate_ab_test = BashOperator(

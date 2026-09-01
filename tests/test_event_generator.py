@@ -1,5 +1,5 @@
 import pytest
-from src.pipeline.event_generator import simulate_user_session, load_config
+from src.generator.event_generator import simulate_user_session, load_config
 
 def test_session_timestamo_monotonicity():
     config = load_config()

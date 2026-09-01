@@ -1,5 +1,4 @@
 simulation:
-  num_users: 1000
   output_dir: "local_clickstream_raw"
 
 funnel:
@@ -20,6 +19,6 @@ funnel:
 experiments:
   experiment_name: "new_checkout_ui"
   checkout_conversion:
-    control: 0.45
-    variant: 0.70
+    control: 0.05
+    variant: 0.055
 

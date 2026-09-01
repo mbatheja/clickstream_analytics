@@ -1,0 +1,16 @@
+{
+    "files.watcherExclude": {
+        "**/local_clickstream_raw/**": true,
+        "**/.venv/**": true,
+        "**/__pycache__/**": true,
+        "**/.git/objects/**": true
+    },
+    "search.exclude": {
+        "**/local_clickstream_raw": true,
+        "**/.venv": true,
+        "**/__pycache__": true
+    },
+    "files.exclude": {
+        "**/__pycache__": true
+    }
+}
