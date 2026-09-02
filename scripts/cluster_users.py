@@ -35,11 +35,15 @@ def run_user_clustering(df: pd.DataFrame):
     scaler = StandardScaler()
     scaled_matrix = scaler.fit_transform(user_features.drop(columns=['user_id']))
 
+    # silhouette_score is O(n^2) -- infeasible at hundreds of thousands of users,
+    # so score it on a fixed random subsample instead of the full population.
+    silhouette_sample_size = min(10000, len(scaled_matrix))
+
     scores = []
     for k in range(2, 6):
         kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
         labels = kmeans.fit_predict(scaled_matrix)
-        score = silhouette_score(scaled_matrix, labels)
+        score = silhouette_score(scaled_matrix, labels, sample_size=silhouette_sample_size, random_state=42)
         scores.append((k, score))
         print(f"K={k} | Silhouette Score: {score:.3f}")
 

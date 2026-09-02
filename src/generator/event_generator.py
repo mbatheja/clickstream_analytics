@@ -18,6 +18,34 @@ from src.utils.sample_size import calculate_sample_size
 
 MAX_WORKERS = 20
 
+# Repeat-visit frequency distribution, shared by the local generator and the
+# S3 streamer so both simulate the same expected sessions-per-user.
+SESSION_COUNT_CHOICES = [1, 2, 3, 4, 5]
+SESSION_COUNT_WEIGHTS = [0.45, 0.25, 0.15, 0.10, 0.05]
+
+
+def expected_sessions_per_user() -> float:
+    return sum(n * w for n, w in zip(SESSION_COUNT_CHOICES, SESSION_COUNT_WEIGHTS))
+
+
+def expected_checkout_reach_prob(config: dict, checkout_step: str = "checkout_initiated") -> float:
+    """
+    Probability that a single session makes it all the way to checkout_step,
+    derived from the funnel's own transition probabilities -- the configured
+    control/variant conversion rates only apply to sessions that reach this
+    stage, so this tells us what fraction of simulated sessions are actually
+    "at risk" for the effect being tested.
+    """
+    funnel_steps = config["funnel"]["steps"]
+    base_probs = config["funnel"]["transition_probabilities"]
+
+    prob = 1.0
+    for step in funnel_steps:
+        if step == checkout_step:
+            break
+        prob *= base_probs.get(step, 1.0)
+    return prob
+
 
 def load_config(config_path: str = "config/config.yaml") -> dict:
     """
@@ -129,13 +157,26 @@ def run_generator(num_users_override: int = None):
         num_users = num_users_override
         print(f"Using overridden user count: {num_users:,} (skipping power analysis)")
     else:
-        # Calculate statistically required user count (80% Power, 95% Confidence)
-        num_users = calculate_sample_size(p1=p_control, relative_mde=relative_mde)
+        # Required checkout-reaching sessions per arm (80% Power, 95% Confidence)
+        n_per_arm = calculate_sample_size(p1=p_control, relative_mde=relative_mde)
+        n_per_arm = n_per_arm[0] if isinstance(n_per_arm, tuple) else n_per_arm
 
         print(f"Control Conversion Rate:    {p_control * 100:.2f}%")
         print(f"Variant Conversion Rate:    {p_variant * 100:.2f}% (Lift: +{relative_mde * 100:.1f}%)")
-        num_users = num_users[0] * 2 if isinstance(num_users, tuple) else num_users
-        print(f"Statistically Required N:  {int(num_users):,} total users")
+        print(f"Required checkout-reaching sessions per arm: {int(n_per_arm):,}")
+
+        # The configured lift only applies to sessions that reach checkout, not
+        # every simulated user -- inflate the population so the checkout-reaching
+        # subset (not the raw user count) actually hits n_per_arm, per arm.
+        checkout_reach_prob = expected_checkout_reach_prob(config)
+        sessions_per_user = expected_sessions_per_user()
+        print(f"Expected checkout-reach rate per session: {checkout_reach_prob * 100:.2f}%")
+        print(f"Expected sessions per user: {sessions_per_user:.2f}")
+
+        total_checkout_sessions_needed = n_per_arm * 2  # both arms
+        num_users = total_checkout_sessions_needed / (sessions_per_user * checkout_reach_prob)
+        print(f"Inflated required N: {int(num_users):,} total users "
+              f"(vs. {int(total_checkout_sessions_needed):,} if every session reached checkout)")
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -182,7 +223,7 @@ def _simulate_and_write_user(idx: int, config: dict, output_dir: str, start_sim_
     signup_date = signup_dt.strftime("%Y-%m-%d")
 
     # Determine repeat visit frequency (1 to 5 sessions per user)
-    num_sessions = random.choices([1, 2, 3, 4, 5], weights=[0.45, 0.25, 0.15, 0.10, 0.05])[0]
+    num_sessions = random.choices(SESSION_COUNT_CHOICES, weights=SESSION_COUNT_WEIGHTS)[0]
     current_session_time = signup_dt
 
     events_written = 0

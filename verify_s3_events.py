@@ -12,6 +12,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 from dotenv import load_dotenv
 
 from src.utils.sample_size import get_required_sample_size
+from src.generator.event_generator import expected_checkout_reach_prob, expected_sessions_per_user
 
 # Sized so two disjoint samples take ~10-15 min total at ~90ms/object.
 RECAPTURE_SAMPLE_SIZE = 4000
@@ -35,8 +36,19 @@ exp_config = config["experiments"]["checkout_conversion"]
 p_control = exp_config["control"]
 p_variant = exp_config["variant"]
 relative_mde = (p_variant - p_control) / p_control
-required_n = get_required_sample_size(p1=p_control, relative_mde=relative_mde)
-print(f"Statistically required N (power analysis): {required_n:,} users")
+
+# Same inflation logic as event_generator.run_generator(): the configured lift
+# only applies to sessions that reach checkout, so the required USER count is
+# inflated to account for funnel drop-off before that stage.
+n_per_arm = get_required_sample_size(p1=p_control, relative_mde=relative_mde) / 2
+checkout_reach_prob = expected_checkout_reach_prob(config)
+sessions_per_user = expected_sessions_per_user()
+required_n = (n_per_arm * 2) / (sessions_per_user * checkout_reach_prob)
+
+print(f"Required checkout-reaching sessions per arm: {int(n_per_arm):,}")
+print(f"Expected checkout-reach rate per session: {checkout_reach_prob * 100:.2f}%")
+print(f"Expected sessions per user: {sessions_per_user:.2f}")
+print(f"Statistically required N (inflated for funnel drop-off): {int(required_n):,} users")
 
 # 1. Count all files using pagination
 paginator = s3.get_paginator("list_objects_v2")
@@ -48,16 +60,23 @@ for page in paginator.paginate(Bucket=BUCKET_NAME):
     file_keys.extend([obj["Key"] for obj in contents if obj["Key"].endswith(".json")])
 
 print(f"Total S3 JSON files found: {len(file_keys)}")
-print(f"Have enough raw event files vs. required N: {len(file_keys) >= required_n}")
+# Note: files may now be NDJSON batches (multiple events each, from s3_streamer.py's
+# batched uploads) rather than one event per file, so file count no longer
+# approximates event/user count -- the mark-recapture estimate below is the real check.
 
 
 def fetch_records(key, retries=3):
-    """Fetch one object and return its list of event records, retrying transient network errors."""
+    """
+    Fetch one object and return its list of event records, retrying transient
+    network errors. Handles both a single JSON object per file (older,
+    un-batched uploads) and newline-delimited JSON batches (multiple objects,
+    one per line) from the current batched streamer.
+    """
     for attempt in range(retries):
         try:
             response = s3.get_object(Bucket=BUCKET_NAME, Key=key)
-            payload = json.loads(response["Body"].read().decode("utf-8"))
-            return payload if isinstance(payload, list) else [payload]
+            body = response["Body"].read().decode("utf-8")
+            return [json.loads(line) for line in body.splitlines() if line.strip()]
         except (ClientError, BotoCoreError):
             if attempt == retries - 1:
                 raise
