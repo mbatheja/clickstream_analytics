@@ -2,12 +2,8 @@ version: 2
 
 models:
   - name: fct_conversion_funnel
-    description: "Session-level fact model tracking funnel progression, drop-offs, and A/B variant conversions"
+    description: "Segment-level fact model (device, variant, acquisition channel, user type) tracking funnel progression, drop-offs, and A/B variant conversions"
     columns:
-      - name: session_date
-        data_tests:
-          - not_null
-      
       - name: variant
         data_tests:
           - not_null
@@ -109,6 +105,60 @@ models:
         data_tests:
           - not_null
       - name: d1_retention_rate
+        data_tests:
+          - not_null
+
+  - name: fct_ab_transitions
+    description: "Average time (seconds) to advance between each funnel step, broken down at both the segment level (variant, device, acquisition_channel, user_type) and the variant level alone, for comparing checkout-UI speed independent of the conversion-rate result."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - variant
+              - device
+              - acquisition_channel
+              - user_type
+    columns:
+      - name: variant
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['control', 'new_checkout_ui']
+
+      - name: grain
+        description: "'segment_level' for device/channel/user_type breakdowns, 'variant_level' for the variant-only rollup (device/acquisition_channel/user_type are null on those rows by design)."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['segment_level', 'variant_level']
+
+      - name: device
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['mobile', 'desktop', 'tablet']
+              config:
+                where: "grain = 'segment_level'"
+
+      - name: acquisition_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Organic', 'Google_Ads', 'Email', 'Direct']
+              config:
+                where: "grain = 'segment_level'"
+
+      - name: user_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['new_user', 'returning_user']
+              config:
+                where: "grain = 'segment_level'"
+
+      - name: total_sessions
         data_tests:
           - not_null
 

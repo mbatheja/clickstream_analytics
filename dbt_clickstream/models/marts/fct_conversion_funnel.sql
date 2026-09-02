@@ -1,5 +1,4 @@
-select 
-    date_trunc('day', session_start) as session_date,
+select
     device,
     variant,
     acquisition_channel,
@@ -25,4 +24,4 @@ select
     round(100.0 * count(case when has_purchased then 1 end) / nullif(count(distinct session_id), 0), 2) as overall_conversion_rate
 
 from {{ ref('int_sessions') }}
-group by session_date, device, variant, acquisition_channel, user_type
+group by device, variant, acquisition_channel, user_type

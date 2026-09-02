@@ -1,8 +1,3 @@
-with events as (
-    select *
-      from {{ ref('stg_events')}}
-),
-    session_metrics as (
 select session_id,
        user_id,
        max(device) as device,
@@ -23,8 +18,6 @@ select session_id,
        count(case when event_type = 'add_to_cart' then 1 end) as added_to_cart,
        max(case when event_type = 'checkout_initiated' then 1 else 0 end)::boolean as has_checkout,
        max(case when event_type = 'purchase_completed' then 1 else 0 end)::boolean as has_purchased
-  from events
-  group by session_id, user_id, variant, device
-  )
 
-select * from session_metrics
+  from {{ ref('stg_events') }}
+ group by session_id, user_id, variant, device
