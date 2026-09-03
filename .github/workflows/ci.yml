@@ -12,12 +12,12 @@ jobs:
 
         steps:
         - name: Checkout Code
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
 
-        - name: Set up Python 3.10
-          uses: actions/setup-python@v4
+        - name: Set up Python 3.12
+          uses: actions/setup-python@v5
           with:
-            python-version: "3.10"
+            python-version: "3.12"
         
         - name: Install Dependencies
           run: |
@@ -28,5 +28,29 @@ jobs:
         - name: Run Pytest Suite
           run: pytest tests/
 
+        - name: Create dummy dbt profile
+          run: |
+            mkdir -p ~/.dbt
+            cat > ~/.dbt/profiles.yml <<EOF
+            clickstream_dbt:
+              target: dev
+              outputs:
+                dev:
+                  type: snowflake
+                  account: dummy_account
+                  user: dummy_user
+                  password: dummy_password
+                  role: dummy_role
+                  database: CLICKSTREAM_DB
+                  warehouse: COMPUTE_WH
+                  schema: DEV
+                  threads: 1
+            EOF
+
+        - name: Install dbt packages
+          working-directory: dbt_clickstream
+          run: dbt deps
+
         - name: Validate dbt Syntax
+          working-directory: dbt_clickstream
           run: dbt parse
